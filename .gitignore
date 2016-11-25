@@ -53,6 +53,7 @@ build-iPhoneSimulator/
 
 .gitignore
 .idea/
+.idea/vcs.xml
 .idea/driver_cloud_ruby.iml
 .idea/misc.xml
 .idea/modules.xml
