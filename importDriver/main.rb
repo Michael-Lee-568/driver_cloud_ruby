@@ -1,11 +1,13 @@
 require 'roo'
 require 'logger'
 require 'pathname'
+require 'securerandom'
 #
 require File.join(File.dirname(__FILE__), '/loggerUtil.rb')
 require File.join(File.dirname(__FILE__), '/preDef.rb')
 require File.join(File.dirname(__FILE__), '/dirUtil.rb')
 require File.join(File.dirname(__FILE__), '/zipUtil.rb')
+require File.join(File.dirname(__FILE__), '/sevenzipUtil.rb')
 begin
 #
 log=LoggerUtil.new
@@ -95,13 +97,52 @@ if(ARGV.length==2)
                 end
                 hash[:zipFileName]=file_zip_name
                 file_zip_path=File.join(dir_drivername,file_zip_name)
+                hash[:zipFilePath]=file_zip_path
                 #在./drivers/20161124_2309_unzip/目录，创建uuid文件夹，并解压zip文件到，uuid文件夹
-                dir_drivers_timeunzip_uuid=DirUtil.generate_uuid_dir(dir_drivers_timeunzip)
-                if(!dir_drivers_timeunzip_uuid.nil?)
+                uuid_str=SecureRandom.uuid
+                dir_drivers_timeunzip_uuid=File.join(dir_drivers_timeunzip,uuid_str)
+                if(DirUtil.generate_dir(dir_drivers_timeunzip_uuid))
                   log.info("[Yes]=> generate dir_drivers_timeunzip_uuid=#{dir_drivers_timeunzip_uuid}")
                   #解压zip文件到uuid文件夹
                   if ZipUtil.unzip_file(file_zip_path,dir_drivers_timeunzip_uuid)
                     log.info("[Yes]=> 解压 #{file_zip_name}到#{dir_drivers_timeunzip_uuid}")
+                    #查找bootfile
+                    hash_parameter= hash[:parameter]
+                    hash_parameter_array= hash_parameter.to_s.split(' ',2)
+                    driver_exe_name=""
+                    driver_exe_silence=""
+                    if(hash_parameter_array.length>=2)
+                      #获取驱动安装程序名称
+                      driver_exe_name=hash_parameter_array[0].to_s.strip
+                      driver_exe_silence=hash_parameter_array[1].to_s.strip
+                      log.info("[Yes]=> 从Excel静默参数中提取驱动安装程序名称：driver_exe_name=#{driver_exe_name}")
+                      log.info("[Yes]=> 从Excel静默参数中提取静默参数：driver_exe_silence=#{driver_exe_silence}")
+                      #递归查找文件夹，拼接bootfile
+                      boot_file_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
+                      if !boot_file_array.nil?
+                        log.info("[Yes]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
+                      else
+                        log.warn("[No]=> 拼接bootfile")
+                        next
+                      end
+                    else
+                      log.warn("[No]=> 从Excel静默参数中提取驱动安装程序和静默参数")
+                      next
+                    end
+                    p Dir.entries(dir_drivers_timeunzip_uuid)
+                    #将UUID文件夹，压缩成7Z，并存放到./drivers/20161124_2309目录下
+                    file_7z_name="#{uuid_str}.bin"
+                    file7z_drivers_time_uuid=File.join(dir_drivers_time,file_7z_name)
+                    hash[:z7FileName]=file_7z_name
+                    hash[:z7FilePath]=file7z_drivers_time_uuid
+                    if SevenzipUtil.compress_file(file7z_drivers_time_uuid,dir_drivers_timeunzip_uuid)
+                      #成功压缩成7Z文件
+                      log.info("[Yes]=> 压缩7Z文件，file7z_drivers_time_uuid= #{file7z_drivers_time_uuid}")
+                      #计算sha256,md5,文件大小
+                    else
+                      log.warn("[No]=> 压缩7Z文件 #{file7z_drivers_time_uuid}")
+                      next
+                    end
                   else
                     log.warn("[No]=> 解压 #{file_zip_name}到#{dir_drivers_timeunzip_uuid}")
                     next

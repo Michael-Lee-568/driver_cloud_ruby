@@ -2,34 +2,48 @@ require 'securerandom'
 require 'pathname'
 
 module DirUtil
-  # @param [父目录] parent_dir
-    # @return [成功创建返回目录名，失败返回nil]
-    def self.generate_uuid_dir (parent_dir)
-    uuid_str=SecureRandom.uuid
-    uuid_dir="#{parent_dir}/#{uuid_str}"
-    if Dir.exist?(uuid_dir)
-      p "created dir failed - #{uuid_dir} is exist"
-      return nil
-    else
-      Dir.mkdir(uuid_dir)
-      p "created dir successfully - #{uuid_dir}"
-      return uuid_dir
-    end
-    end
 
     # @param [将要创建的目录] dir
     # @return [true|false]
     def self.generate_dir (dir)
-      if Dir.exist?(dir)
-        p "created dir failed - #{dir} is exist"
-        return false
-      else
-        Dir.mkdir(dir)
-        p "created dir successfully - #{dir}"
-        return true
+      begin
+        if Dir.exist?(dir)
+          p "created dir failed - #{dir} is exist"
+          return false
+        else
+          Dir.mkdir(dir)
+          p "created dir successfully - #{dir}"
+          return true
+        end
+      end
+      return true
+    rescue => err
+      puts err
+      return false
+    end
+
+  def self.traverse_dir_find_file(find_file,dir)
+    begin
+      file_array=[]
+      if File.directory?(dir)
+        Dir.foreach(dir) do |file|
+          next if file=="." or file ==".."
+          if File.directory?(file)
+            traverse_dir_find_file(find_file,file)
+          else
+            file_array.push(Pathname.new(file).realpath) if find_file.to_s.downcase===file.to_s.downcase
+          end
+        end
       end
     end
+    return file_array
+  rescue => err
+    puts err
+    return nil
+  end
 end
+
+
 
 =begin
 current_dir=Pathname.new(File.dirname(__FILE__)).realpath
