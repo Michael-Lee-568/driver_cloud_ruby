@@ -74,11 +74,20 @@ if(ARGV.length==2)
         xlsx = Roo::Spreadsheet.open(file_mt_excel)
         log.info( "xlsx.info: #{xlsx.info}" )
         sheet=xlsx.sheet(0)
-        row_num_hash=0
+        row_num=0
+      row_num_hash_header=0
         sheet.each(driverName:'driverName',driverType: 'driverType', driverVersion: 'driverVersion',osStr:'osStr',os:'os',Vender:'Vender',coreVersion:'coreVersion',parameter:'parameter',driverFrom:'driverFrom') do |hash|
-          #利用row_num_hash,跳过首行标题
-          if (row_num_hash>0)
-            log.info("row_num_hash=#{row_num_hash}")
+          row_num=row_num+1
+          log.info("row_num=#{row_num}")
+          #利用row_num_hash_header,跳过首行标题
+          if row_num_hash_header===0
+            log.info("[Yes]=> 准备，跳过首行标题：row_num_hash_header=#{row_num_hash_header}")
+            row_num_hash_header=row_num_hash_header+1
+            log.info("[Yes]=> 完成，跳过首行标题：row_num_hash_header=#{row_num_hash_header}")
+            next
+          end
+          if (row_num_hash_header>0)
+            log.info("row_num_hash_header=#{row_num_hash_header}")
             #查找操作系统文件夹
             dir_os=File.join(dir_mt_mt,hash[:osStr])
             if Dir.exist?(dir_os) then
@@ -119,27 +128,32 @@ if(ARGV.length==2)
                       log.info("[Yes]=> 从Excel静默参数中提取静默参数：driver_exe_silence=#{driver_exe_silence}")
                       #递归查找文件夹，拼接bootfile
                       DirUtil.reset_boot_file_array
-                      boot_file_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
-                      if !boot_file_array.nil?
-                        log.info("[Yes]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
-                        boot_file_array.each do |boot_file_origin|
+                      boot_file_origin_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
+                      boot_file_array=Array.new
+                      if !boot_file_origin_array.nil?
+                        log.info("[Yes]=> 拼接: boot_file_origin_array=#{boot_file_origin_array}")
+                        if boot_file_origin_array.length >1
+                          log.warn("[Warn]=> bootfile 多于一个，拼接bootfile: boot_file_origin_array=#{boot_file_origin_array}")
+                          next
+                        end
+                        if boot_file_origin_array.length <1
+                          log.warn("[Warn]=> 未成生正确的bootfile，拼接bootfile: boot_file_origin_array=#{boot_file_origin_array}")
+                          next
+                        end
+                        boot_file_origin_array.each do |boot_file_origin_str|
                           #boot_file_origin[dir_drivers_timeunzip]=dir_drivers_time
-                          boot_file_origin_str_array=boot_file_origin.to_s.split('/')
+                          boot_file_origin_str_array=boot_file_origin_str.to_s.split('/')
                           if(boot_file_origin_str_array.length>2)
+                            #boot_file_str="/#{boot_file_origin_str_array[-3]}/#{boot_file_origin_str_array[-2]}/#{boot_file_origin_str_array[-1]}"[dir_drivers_timeunzip]=dir_drivers_time
+                            boot_file_str="/#{boot_file_origin_str_array[-3]}/#{boot_file_origin_str_array[-2]}/#{boot_file_origin_str_array[-1]}"
+                            boot_file_array.push(boot_file_str)
                           else
-                            log.warn("[No]=> 切换bootfile目录: boot_file_array=#{boot_file_array}")
+                            log.warn("[No]=> 切换bootfile路径: boot_file_origin_array=#{boot_file_origin_array}")
                             next
                           end
                         end
-                        log.info("[Yes]=> 切换bootfile目录: boot_file_array=#{boot_file_array}")
-                        if boot_file_array.length >1
-                          log.warn("[Warn]=> bootfile 多于一个，拼接bootfile: boot_file_array=#{boot_file_array}")
-                          next
-                        end
-                        if boot_file_array.length <1
-                          log.warn("[Warn]=> 未成生正确的bootfile，拼接bootfile: boot_file_array=#{boot_file_array}")
-                          next
-                        end
+                        #bootfile完成
+                        log.info("[Yes]=> boot_file_origin_array 切换为: boot_file_array=#{boot_file_array}")
                       else
                         log.warn("[No]=> 拼接bootfile")
                         next
@@ -181,7 +195,6 @@ if(ARGV.length==2)
               log.warn("操作系统文件夹不存在:#{dir_os}")
             end
           end
-          row_num_hash=row_num_hash+1
         end
     else
       log.warn("[No]=> generate dir_drivers_timeunzip=#{dir_drivers_timeunzip}")
