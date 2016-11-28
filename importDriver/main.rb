@@ -118,9 +118,13 @@ if(ARGV.length==2)
                       log.info("[Yes]=> 从Excel静默参数中提取驱动安装程序名称：driver_exe_name=#{driver_exe_name}")
                       log.info("[Yes]=> 从Excel静默参数中提取静默参数：driver_exe_silence=#{driver_exe_silence}")
                       #递归查找文件夹，拼接bootfile
+                      DirUtil.reset_boot_file_array
                       boot_file_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
                       if !boot_file_array.nil?
                         log.info("[Yes]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
+                        if boot_file_array.length >1
+                          log.warn("[Warn]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
+                        end
                       else
                         log.warn("[No]=> 拼接bootfile")
                         next
@@ -129,7 +133,6 @@ if(ARGV.length==2)
                       log.warn("[No]=> 从Excel静默参数中提取驱动安装程序和静默参数")
                       next
                     end
-                    p Dir.entries(dir_drivers_timeunzip_uuid)
                     #将UUID文件夹，压缩成7Z，并存放到./drivers/20161124_2309目录下
                     file_7z_name="#{uuid_str}.bin"
                     file7z_drivers_time_uuid=File.join(dir_drivers_time,file_7z_name)
@@ -137,7 +140,7 @@ if(ARGV.length==2)
                     hash[:z7FilePath]=file7z_drivers_time_uuid
                     if SevenzipUtil.compress_file(file7z_drivers_time_uuid,dir_drivers_timeunzip_uuid)
                       #成功压缩成7Z文件
-                      log.info("[Yes]=> 压缩7Z文件，file7z_drivers_time_uuid= #{file7z_drivers_time_uuid}")
+                      log.info("[Yes]=> 压缩7Z文件，压缩目录#{dir_drivers_timeunzip_uuid}到 file7z_drivers_time_uuid= #{file7z_drivers_time_uuid}")
                       #计算sha256,md5,文件大小
                     else
                       log.warn("[No]=> 压缩7Z文件 #{file7z_drivers_time_uuid}")

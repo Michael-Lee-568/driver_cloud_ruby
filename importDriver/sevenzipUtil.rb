@@ -5,9 +5,10 @@ require 'digest'
 module SevenzipUtil
   def SevenzipUtil.compress_file (file_7z, dir)
     begin
+      uuid=File.basename(file_7z, '.*')
       File.open(file_7z, "wb") do |file|
         SevenZipRuby::Writer.open(file) do |szr|
-          szr.add_directory(dir)
+          szr.add_directory(dir,as: uuid)
         end
       end
       return true

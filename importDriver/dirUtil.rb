@@ -22,21 +22,33 @@ module DirUtil
       return false
     end
 
+    @@boot_file_array=Array.new
+    def self.reset_boot_file_array()
+      @@boot_file_array.clear()
+    end
   def self.traverse_dir_find_file(find_file,dir)
     begin
-      file_array=[]
+      puts "递归查找文件开始"
+      #file_array=[]
       if File.directory?(dir)
         Dir.foreach(dir) do |file|
           next if file=="." or file ==".."
-          if File.directory?(file)
-            traverse_dir_find_file(find_file,file)
+          file_path= File.join(dir,file)
+          if File.directory? file_path
+            traverse_dir_find_file(find_file,file_path)
           else
-            file_array.push(Pathname.new(file).realpath) if find_file.to_s.downcase===file.to_s.downcase
+            puts file_path
+            if find_file.to_s.downcase===file.to_s.downcase
+              #file_array.push(file_path)
+              @@boot_file_array.push(file_path)
+              puts "push bootfile=#{file_path}"
+            end
           end
         end
       end
     end
-    return file_array
+    puts "递归查找文件结束"
+    return @@boot_file_array
   rescue => err
     puts err
     return nil
