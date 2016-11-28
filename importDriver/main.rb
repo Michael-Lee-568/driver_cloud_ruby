@@ -122,8 +122,23 @@ if(ARGV.length==2)
                       boot_file_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
                       if !boot_file_array.nil?
                         log.info("[Yes]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
+                        boot_file_array.each do |boot_file_origin|
+                          #boot_file_origin[dir_drivers_timeunzip]=dir_drivers_time
+                          boot_file_origin_str_array=boot_file_origin.to_s.split('/')
+                          if(boot_file_origin_str_array.length>2)
+                          else
+                            log.warn("[No]=> 切换bootfile目录: boot_file_array=#{boot_file_array}")
+                            next
+                          end
+                        end
+                        log.info("[Yes]=> 切换bootfile目录: boot_file_array=#{boot_file_array}")
                         if boot_file_array.length >1
-                          log.warn("[Warn]=> 拼接bootfile: boot_file_array=#{boot_file_array}")
+                          log.warn("[Warn]=> bootfile 多于一个，拼接bootfile: boot_file_array=#{boot_file_array}")
+                          next
+                        end
+                        if boot_file_array.length <1
+                          log.warn("[Warn]=> 未成生正确的bootfile，拼接bootfile: boot_file_array=#{boot_file_array}")
+                          next
                         end
                       else
                         log.warn("[No]=> 拼接bootfile")
