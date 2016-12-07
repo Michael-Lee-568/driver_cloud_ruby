@@ -141,11 +141,11 @@ if(ARGV.length==2)
                           next
                         end
                         boot_file_origin_array.each do |boot_file_origin_str|
-                          #boot_file_origin[dir_drivers_timeunzip]=dir_drivers_time
-                          boot_file_origin_str_array=boot_file_origin_str.to_s.split('/')
-                          if(boot_file_origin_str_array.length>2)
-                            #boot_file_str="/#{boot_file_origin_str_array[-3]}/#{boot_file_origin_str_array[-2]}/#{boot_file_origin_str_array[-1]}"[dir_drivers_timeunzip]=dir_drivers_time
-                            boot_file_str="/#{boot_file_origin_str_array[-3]}/#{boot_file_origin_str_array[-2]}/#{boot_file_origin_str_array[-1]}"
+                          #去掉boot_file_origin_str中的_unzip，转揣为客户端需要的bootfile
+                          boot_file_origin_str[dir_drivers_timeunzip]=dir_drivers_time
+                          boot_file_str_array=boot_file_origin_str.to_s.split('/')
+                          if(boot_file_str_array.length>2)
+                            boot_file_str="/#{boot_file_str_array[-3]}/#{boot_file_str_array[-2]}/#{boot_file_str_array[-1]}"
                             boot_file_array.push(boot_file_str)
                           else
                             log.warn("[No]=> 切换bootfile路径: boot_file_origin_array=#{boot_file_origin_array}")
