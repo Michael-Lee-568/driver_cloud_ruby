@@ -1,6 +1,6 @@
 
 module PreDef
-  OS= {
+  $OS= {
       "XP"=>1,
       "vista_32"=>4,
       "vista_64"=>5,
@@ -13,4 +13,5 @@ module PreDef
       "win10_32"=>41,
       "win10_64"=>42
   }
+  $DriverWeight={"WS"=>50,"BU"=>100,"NB"=>101,"TVSU"=>110}
 end

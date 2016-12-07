@@ -2,12 +2,14 @@ require 'roo'
 require 'logger'
 require 'pathname'
 require 'securerandom'
+require 'digest'
 #
 require File.join(File.dirname(__FILE__), '/loggerUtil.rb')
 require File.join(File.dirname(__FILE__), '/preDef.rb')
 require File.join(File.dirname(__FILE__), '/dirUtil.rb')
 require File.join(File.dirname(__FILE__), '/zipUtil.rb')
 require File.join(File.dirname(__FILE__), '/sevenzipUtil.rb')
+require File.join(File.dirname(__FILE__), '/mongodbUtil.rb')
 begin
 #
 log=LoggerUtil.new
@@ -48,6 +50,7 @@ if(ARGV.length==2)
   if(dir_global!=""&&dir_mt!=""&&dir_mt_mt!=""&&dir_drivers!=""&&dir_mt_mt.split('_').length>2&&Dir.exist?(dir_mt_mt)&&File.exist?(file_mt_excel))
     dir_time_array=dir_mt_mt.split('_')
     dir_time_str=dir_time_array[-2]+'_'+dir_time_array[-1]
+    p "dir_time_str=#{dir_time_str}"
     dir_drivers_time=File.join(dir_drivers,dir_time_str)
     p "dir_drivers_time=#{dir_drivers_time}"
     dir_drivers_timeunzip=File.join(dir_drivers,"#{dir_time_str}_unzip")
@@ -76,7 +79,7 @@ if(ARGV.length==2)
         sheet=xlsx.sheet(0)
         row_num=0
       row_num_hash_header=0
-        sheet.each(driverName:'driverName',driverType: 'driverType', driverVersion: 'driverVersion',osStr:'osStr',os:'os',Vender:'Vender',coreVersion:'coreVersion',parameter:'parameter',driverFrom:'driverFrom') do |hash|
+        sheet.each(driverName:'driverName',driverType: 'driverType', driverVersion: 'driverVersion',osStr:'osStr',os:'os',coreVersion:'coreVersion',originParameter:'originParameter',driverFrom:'driverFrom',originalHardwareId:'originalHardwareId',vender:'vender',mt:'mt') do |hash|
           row_num=row_num+1
           log.info("row_num=#{row_num}")
           #利用row_num_hash_header,跳过首行标题
@@ -90,6 +93,8 @@ if(ARGV.length==2)
             log.info("row_num_hash_header=#{row_num_hash_header}")
             #查找操作系统文件夹
             dir_os=File.join(dir_mt_mt,hash[:osStr])
+            hash[:os_map]=$OS[hash[:osStr]]
+            hash[:driverWeight]=$DriverWeight[hash[:driverFrom]]
             if Dir.exist?(dir_os) then
               if dir_drivername=File.join(dir_os,hash[:driverName]) then
                 #查找zip文件
@@ -109,6 +114,7 @@ if(ARGV.length==2)
                 hash[:zipFilePath]=file_zip_path
                 #在./drivers/20161124_2309_unzip/目录，创建uuid文件夹，并解压zip文件到，uuid文件夹
                 uuid_str=SecureRandom.uuid
+                hash[:uuid]=uuid_str
                 dir_drivers_timeunzip_uuid=File.join(dir_drivers_timeunzip,uuid_str)
                 if(DirUtil.generate_dir(dir_drivers_timeunzip_uuid))
                   log.info("[Yes]=> generate dir_drivers_timeunzip_uuid=#{dir_drivers_timeunzip_uuid}")
@@ -116,7 +122,7 @@ if(ARGV.length==2)
                   if ZipUtil.unzip_file(file_zip_path,dir_drivers_timeunzip_uuid)
                     log.info("[Yes]=> 解压 #{file_zip_name}到#{dir_drivers_timeunzip_uuid}")
                     #查找bootfile
-                    hash_parameter= hash[:parameter]
+                    hash_parameter= hash[:originParameter]
                     hash_parameter_array= hash_parameter.to_s.split(' ',2)
                     driver_exe_name=""
                     driver_exe_silence=""
@@ -126,6 +132,7 @@ if(ARGV.length==2)
                       driver_exe_silence=hash_parameter_array[1].to_s.strip
                       log.info("[Yes]=> 从Excel静默参数中提取驱动安装程序名称：driver_exe_name=#{driver_exe_name}")
                       log.info("[Yes]=> 从Excel静默参数中提取静默参数：driver_exe_silence=#{driver_exe_silence}")
+                      hash[:parameter]=driver_exe_silence
                       #递归查找文件夹，拼接bootfile
                       DirUtil.reset_boot_file_array
                       boot_file_origin_array=DirUtil.traverse_dir_find_file(driver_exe_name,dir_drivers_timeunzip_uuid)
@@ -143,17 +150,15 @@ if(ARGV.length==2)
                         boot_file_origin_array.each do |boot_file_origin_str|
                           #去掉boot_file_origin_str中的_unzip，转揣为客户端需要的bootfile
                           boot_file_origin_str[dir_drivers_timeunzip]=dir_drivers_time
-                          boot_file_str_array=boot_file_origin_str.to_s.split('/')
-                          if(boot_file_str_array.length>2)
-                            boot_file_str="/#{boot_file_str_array[-3]}/#{boot_file_str_array[-2]}/#{boot_file_str_array[-1]}"
-                            boot_file_array.push(boot_file_str)
-                          else
-                            log.warn("[No]=> 切换bootfile路径: boot_file_origin_array=#{boot_file_origin_array}")
-                            next
-                          end
+                          boot_file_origin_str['./drivers']=''
+                          hash[:filePath]=String.new(boot_file_origin_str)
+                          boot_file_origin_str["/#{dir_time_str}"]=""
+                          boot_file_str=String.new(boot_file_origin_str)
+                          boot_file_array.push(boot_file_str)
                         end
                         #bootfile完成
                         log.info("[Yes]=> boot_file_origin_array 切换为: boot_file_array=#{boot_file_array}")
+                        hash[:bootFile]=boot_file_array[0]
                       else
                         log.warn("[No]=> 拼接bootfile")
                         next
@@ -171,6 +176,17 @@ if(ARGV.length==2)
                       #成功压缩成7Z文件
                       log.info("[Yes]=> 压缩7Z文件，压缩目录#{dir_drivers_timeunzip_uuid}到 file7z_drivers_time_uuid= #{file7z_drivers_time_uuid}")
                       #计算sha256,md5,文件大小
+                      sha256 = Digest::SHA256.file file7z_drivers_time_uuid
+                      log.info("sha256=#{sha256}")
+                      hash[:sha256]=sha256.to_s
+                      md5 = Digest::MD5.file file7z_drivers_time_uuid
+                      log.info("md5=#{md5}")
+                      hash[:md5]=md5.to_s
+                      if MongodbUtil.insert(hash)
+                      else
+                        log.warn("[No]=> insert DB. hash=#{hash}")
+                        next
+                      end
                     else
                       log.warn("[No]=> 压缩7Z文件 #{file7z_drivers_time_uuid}")
                       next
