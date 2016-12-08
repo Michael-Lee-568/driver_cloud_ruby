@@ -182,6 +182,7 @@ if(ARGV.length==2)
                       md5 = Digest::MD5.file file7z_drivers_time_uuid
                       log.info("md5=#{md5}")
                       hash[:md5]=md5.to_s
+                      hash[:driverSize]=File.size(file7z_drivers_time_uuid)
                       if MongodbUtil.insert(hash)
                       else
                         log.warn("[No]=> insert DB. hash=#{hash}")
